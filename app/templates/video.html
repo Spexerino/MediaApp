@@ -1,0 +1,10 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <div class="container text-center">
+        <video width="100%" controls>
+            <source src="{{ url_for('main.serve_video_by_date', year=year, month=month, day=day, filename=filename) }}" type="video/mp4">
+            Your browser does not support the video tag.
+        </video>
+    </div>
+{% endblock %}

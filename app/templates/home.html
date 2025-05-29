@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+
+{% block content %}
+  <div class="container mt-4">
+    <div class="mb-4">
+      <label for="selectedDate" class="form-label fw-bold">Selected Date</label>
+      <p id="selectedDate" class="form-control form-control-sm text-center mb-3" 
+      style="user-select: none; pointer-events: none;">
+      {% if year %}{{ year }}{% endif %}
+      {% if month %}-{{ '%02d'|format(month|int) }}{% endif %}
+      {% if day %}-{{ '%02d'|format(day|int) }}{% endif %}
+    </p>      
+    </div>
+  </div>  
+  <div class="container">
+    {% for dir_row in dir_list | batch(3, '') %}
+    <div class="row mb-4">
+      {% for dir in dir_row %}
+      <div class="col-md-4">
+        {% if dir %}
+          {% if year == None %}
+            {% set link = url_for('main.home', year=dir, month=month, day=day) %}
+          {% elif month == None %}
+            {% set link = url_for('main.home', year=year, month=dir, day=day) %}
+          {% elif day == None %}
+            {% set link = url_for('main.home', year=year, month=month, day=dir) %}
+          {% else %}
+            {% set link = url_for('main.home', year=year, month=month, day=day, filename=dir) %}
+          {% endif %}
+
+          <a href="{{ link }}" class="text-decoration-none text-dark">
+            <div class="card">
+              {% if day == None %}
+                <img src="{{ url_for('static', filename='folder.svg') }}" class="card-img-top mx-auto d-block mt-3 mb-2" alt="Folder" style="width:75%; ">
+              {% else %}
+                <video width="100%" muted class="video-preview" preload="metadata">
+                  <source src="{{ url_for('main.serve_video_by_date', year=year, month=month, day=day, filename=dir) }}" type="video/mp4">
+                  Your browser does not support the video tag.
+                </video>
+              {% endif %}
+              <div class="card-body text-center">
+                <h5 class="card-title">{{ dir }}</h5>
+              </div>
+            </div>
+          </a>
+        {% else %}
+          <div class="card invisible">
+            <div class="card-body">&nbsp;</div>
+          </div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endblock %}
+
+  {% block scripts %}
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      const videos = document.querySelectorAll(".video-preview");
+  
+      videos.forEach(video => {
+        video.addEventListener("mouseenter", () => {
+          video.currentTime = 0;
+          video.play();
+        });
+  
+        video.addEventListener("mouseleave", () => {
+          video.pause();
+          video.currentTime = 0;
+        });
+      });
+    });
+  </script>
+  {% endblock %}
+
