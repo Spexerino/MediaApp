@@ -1,7 +1,15 @@
-from flask import Blueprint, render_template, send_from_directory, abort, request
+from flask import Blueprint, render_template, send_from_directory, abort, request, Response, current_app
 import os
+import cv2
+from app.models import Camera
+
 
 main = Blueprint('main', __name__)
+
+@main.app_context_processor
+def inject_cameras():
+    cameras = Camera.query.order_by(Camera.name).all()
+    return dict(nav_cameras=cameras)
 
 # a simple page that says hello
 @main.route('/',defaults={'year':None, 'month':None, 'day':None,'filename':None})
@@ -58,3 +66,32 @@ def get_dir_list(year,month,day):
         print(filtered_dirs)
     
         return filtered_dirs
+        
+
+def gen_frames(rtsp_url):
+    
+    cap = cv2.VideoCapture(rtsp_url)
+    while True:
+        success, frame = cap.read()
+        if not success:
+            break
+        ret, buffer = cv2.imencode('.jpg', frame)
+        frame = buffer.tobytes()
+        yield (b'--frame\r\n'
+               b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+
+
+@main.route('/camera_feed/<name>')
+
+def camera_feed(name):
+    from app.models import Camera
+    camera = Camera.query.filter_by(name=name).first()
+    if not camera:
+        abort(404)
+    return Response(gen_frames(camera.get_rtsp_url()),
+                    mimetype='multipart/x-mixed-replace; boundary=frame')
+
+@main.route('/stream/<name>')
+
+def stream(name):
+    return render_template('stream.html',name=name)

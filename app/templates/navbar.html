@@ -19,7 +19,17 @@
             <a class="nav-link{% if day == None and month %} active{% endif %}" href="{{ url_for('main.home', year=year, month=month, day=None) }}">Days</a>
           </li>
           {% endif %}
-        </ul>
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" id="navbarCameraDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              Cameras
+            </a>
+            <ul class="dropdown-menu" aria-labelledby="navbarCameraDropdown">
+              {% for camera in nav_cameras %}
+                <li><a class="dropdown-item" href="{{ url_for('main.stream', name=camera.name) }}">{{ camera.name }}</a></li>
+              {% endfor %}
+            </ul>
+          </li>          
+        </ul>        
         <form class="d-flex" role="search" method="get">
           <input class="form-control me-2" type="search" name="search" value="{{ request.args.get('search', '') }}" placeholder="Search" aria-label="Search">
           <button class="btn btn-outline-light" type="submit">Search</button>
