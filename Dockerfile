@@ -1,16 +1,24 @@
 FROM python:3.11-slim
 
-# Set work directory
 WORKDIR /app
 
-# Copy dependencies
-COPY requirements.txt .
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    ffmpeg \
+    libsm6 \
+    libxext6 \
+    libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
 
-# Install dependencies
+# Copy requirements and install
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
+# Copy app code
 COPY . .
 
-# Run the app
-CMD ["python", "run.py"]
+# Expose port
+EXPOSE 5000
+
+# Run the app with Gunicorn
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "run:app"]

@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, send_from_directory, abort, request, Response, current_app
 import os
 import cv2
+import math
 from app.models import Camera
 
 
@@ -18,22 +19,35 @@ def inject_cameras():
 @main.route('/<year>/<month>/<day>',defaults={'filename':None})
 @main.route('/<year>/<month>/<day>/<filename>')
 def home(year,month,day,filename):
+    
     if filename == None:
-        dir_list = get_dir_list(year,month,day)
-        return render_template("home.html",dir_list=dir_list,year=year,month=month,day=day)
+        if day == None:
+            dir_list = get_dir_list(year,month,day)
+            return render_template("home.html",dir_list=dir_list,year=year,month=month,day=day)
+        else:
+            per_page = 9
+            dir_list = get_dir_list(year,month,day)
+            page = request.args.get('page', 1, type=int)
+            start = (page - 1) * per_page
+            end = start + per_page
+            videos = dir_list[start:end]
+            total = len(dir_list)
+            return render_template("home.html",dir_list=videos,page=page,
+                           total_pages=math.ceil(total / per_page),year=year,month=month,day=day)
     else:
         return render_template("video.html",year=year,month=month,day=day,filename=filename)
-
-EXTERNAL_MEDIA_ROOT = os.path.abspath("/Volumes/video")
+    
 
 @main.route('/videos/<int:year>/<int:month>/<int:day>/<path:filename>')
 def serve_video_by_date(year, month, day, filename):
+    abs_path = os.path.abspath(current_app.config['EXTERNAL_MEDIA_ROOT'])
     folder = os.path.join(
-        EXTERNAL_MEDIA_ROOT,
+        abs_path,
         str(year),
         f"{month:02d}",
         f"{day:02d}"
     )
+    print(folder)
     try:
         return send_from_directory(folder, filename)
     except FileNotFoundError:
@@ -52,9 +66,9 @@ def get_dir_list(year,month,day):
         
         dir_list = os.listdir(path)
         if day != None:
-            dir_list = [x for x in dir_list if not(x.startswith('.')) and x.endswith('.mp4')]
+            dir_list = sorted([x for x in dir_list if not(x.startswith('.')) and x.endswith('.mp4')])
         else:
-            dir_list = [x for x in dir_list if not(x.startswith('.'))]
+            dir_list = sorted([x for x in dir_list if not(x.startswith('.'))])
 
         query = request.args.get("search", "").lower()
         
@@ -62,15 +76,13 @@ def get_dir_list(year,month,day):
             filtered_dirs = [d for d in dir_list if query in d.lower()]
         else:
             filtered_dirs = dir_list
-
-        print(filtered_dirs)
     
         return filtered_dirs
         
 
 def gen_frames(rtsp_url):
     
-    cap = cv2.VideoCapture(rtsp_url)
+    cap = cv2.VideoCapture(rtsp_url, cv2.CAP_FFMPEG)
     while True:
         success, frame = cap.read()
         if not success:

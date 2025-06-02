@@ -6,14 +6,15 @@ import os
 db = SQLAlchemy()
 
 def create_app():
-    app = Flask(__name__)
+    app = Flask(__name__,instance_relative_config=True)
     
-    load_dotenv()
+    load_dotenv(override=True)
     app.config.from_object('config')  # Load global config
-    app.config.from_pyfile('../instance/config.py', silent=True)  # Override with local config
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///cameras.db'
+    app.config.from_pyfile('config.py', silent=True)  # Override with local config
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DB_URL')
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['ENCRYPTION_KEY'] = os.environ.get('CRYPT_KEY')
+    app.config['EXTERNAL_MEDIA_ROOT'] = os.environ.get('EXTERNAL_MEDIA_ROOT')
 
     db.init_app(app)
 
