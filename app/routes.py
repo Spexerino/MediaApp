@@ -54,15 +54,15 @@ def serve_video_by_date(year, month, day, filename):
         abort(404)
 
 def get_dir_list(year,month,day):
-
+        root = current_app.config['EXTERNAL_MEDIA_ROOT']
         if year is None:
-            path=current_app.config['EXTERNAL_MEDIA_ROOT']
+            path=root
         elif month is None:
-            path=current_app.config['EXTERNAL_MEDIA_ROOT']+'/' +year
+            path=root+year
         elif day is None:
-            path=current_app.config['EXTERNAL_MEDIA_ROOT']+'/'+year+"/"+month
+            path=root+year+"/"+month
         else: 
-            path=current_app.config['EXTERNAL_MEDIA_ROOT']+'/'+year+"/"+month+"/"+day
+            path=root+year+"/"+month+"/"+day
         
         dir_list = os.listdir(path)
         if day != None:
