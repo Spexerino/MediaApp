@@ -1,11 +1,15 @@
 version: "3.9"
+
 services:
-  web:
+  flaskapp:
     build: .
+    container_name: homestation
     ports:
       - "4999:4999"
     volumes:
-      - .:/app
+      - /volume1/video:/app/videos:ro
     environment:
       - FLASK_ENV=development
-    env_file: .env
+    env_file: 
+      - .env
+
