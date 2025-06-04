@@ -3,7 +3,7 @@ import os
 import cv2
 import math
 from app.models import Camera
-
+from pathlib import Path
 
 main = Blueprint('main', __name__)
 
@@ -47,37 +47,47 @@ def serve_video_by_date(year, month, day, filename):
         f"{month:02d}",
         f"{day:02d}"
     )
-    print(folder)
+
     try:
         return send_from_directory(folder, filename)
     except FileNotFoundError:
         abort(404)
 
 def get_dir_list(year,month,day):
-        root = current_app.config['EXTERNAL_MEDIA_ROOT']
-        if year is None:
-            path=root
-        elif month is None:
-            path=root+year
-        elif day is None:
-            path=root+year+"/"+month
-        else: 
-            path=root+year+"/"+month+"/"+day
-        
-        dir_list = os.listdir(path)
-        if day != None:
-            dir_list = sorted([x for x in dir_list if not(x.startswith('.')) and x.endswith('.mp4')])
-        else:
-            dir_list = sorted([x for x in dir_list if not(x.startswith('.'))])
+        from pathlib import Path
 
-        query = request.args.get("search", "").lower()
-        
-        if query:
-            filtered_dirs = [d for d in dir_list if query in d.lower()]
-        else:
-            filtered_dirs = dir_list
-    
-        return filtered_dirs
+def get_dir_list(year, month, day):
+    root = Path(current_app.config['EXTERNAL_MEDIA_ROOT'])
+
+    if year is None:
+        path = root
+    elif month is None:
+        path = root / year
+    elif day is None:
+        path = root / year / month
+    else:
+        path = root / year / month / day
+
+    if not path.exists():
+        return []
+
+    if day is not None:
+        dir_list = sorted([
+            f.name for f in path.iterdir()
+            if f.is_file() and f.name.endswith('.mp4') and not f.name.startswith('.')
+        ])
+    else:
+        dir_list = sorted([
+            f.name for f in path.iterdir()
+            if f.is_dir() and not f.name.startswith('.')
+        ])
+
+    query = request.args.get("search", "").lower()
+    if query:
+        dir_list = [d for d in dir_list if query in d.lower()]
+
+    return dir_list
+
         
 
 def gen_frames(rtsp_url):
