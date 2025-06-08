@@ -5,13 +5,14 @@
     <div class="mb-4">
       <label for="selectedDate" class="form-label fw-bold">Selected Date</label>
       <p id="selectedDate" class="form-control form-control-sm text-center mb-3" 
-      style="user-select: none; pointer-events: none;">
-      {% if year %}{{ year }}{% endif %}
-      {% if month %}-{{ '%02d'|format(month|int) }}{% endif %}
-      {% if day %}-{{ '%02d'|format(day|int) }}{% endif %}
-    </p>      
+         style="user-select: none; pointer-events: none;">
+        {% if year %}{{ year }}{% endif %}
+        {% if month %}-{{ '%02d'|format(month|int) }}{% endif %}
+        {% if day %}-{{ '%02d'|format(day|int) }}{% endif %}
+      </p>      
     </div>
   </div>  
+
   <div class="container">
     {% for dir_row in dir_list | batch(3, '') %}
     <div class="row mb-4">
@@ -19,9 +20,9 @@
       <div class="col-md-4">
         {% if dir %}
           {% if year == None %}
-            {% set link = url_for('main.home', year=dir, month=month, day=day) %}
+            {% set link = url_for('main.home', year=dir) %}
           {% elif month == None %}
-            {% set link = url_for('main.home', year=year, month=dir, day=day) %}
+            {% set link = url_for('main.home', year=year, month=dir) %}
           {% elif day == None %}
             {% set link = url_for('main.home', year=year, month=month, day=dir) %}
           {% else %}
@@ -31,10 +32,14 @@
           <a href="{{ link }}" class="text-decoration-none text-dark">
             <div class="card">
               {% if day == None %}
-                <img src="{{ url_for('static', filename='folder.svg') }}" loading="lazy" class="card-img-top mx-auto d-block mt-3 mb-2" alt="Folder" style="width:75%; ">
+                <!-- Show folder icon -->
+                <img src="{{ url_for('static', filename='folder.svg') }}" loading="lazy"
+                     class="card-img-top mx-auto d-block mt-3 mb-2" alt="Folder" style="width:75%;">
               {% else %}
-                <video class="video-preview lazy-video" width="100%" muted preload="none" data-src="{{ url_for('main.serve_video_by_date',
-                            year=year, month=month, day=day, filename=dir) }}">
+                <!-- Show video preview -->
+                <video class="video-preview lazy-video" width="100%" muted preload="none"
+                       data-src="{{ url_for('main.serve_video_by_date',
+                                year=year, month=month, day=day, filename=dir) }}">
                 </video>
               {% endif %}
               <div class="card-body text-center">
@@ -43,6 +48,7 @@
             </div>
           </a>
         {% else %}
+          <!-- Placeholder card to maintain 3-column layout -->
           <div class="card invisible">
             <div class="card-body">&nbsp;</div>
           </div>
@@ -53,33 +59,34 @@
     {% endfor %}
   </div>
 
-  {% if day != None %}
-  {% if total_pages > 1 %}
+  {% if day is not none and total_pages > 1 %}
   <footer class="footer fixed-bottom bg-dark py-3 border-top border-secondary">
     <div class="container d-flex justify-content-center">
       <ul class="pagination mb-0">
         {% if page > 1 %}
         <li class="page-item">
-          <a class="page-link bg-dark text-light border-0" href="{{ url_for('main.home', year=year, month=month, day=day, page=page-1) }}">Previous</a>
+          <a class="page-link bg-dark text-light border-0"
+             href="{{ url_for('main.home', year=year, month=month, day=day, page=page-1) }}">Previous</a>
         </li>
         {% endif %}
-  
+
         {% for p in range(1, total_pages + 1) %}
         <li class="page-item {% if p == page %}active{% endif %}">
-          <a class="page-link {% if p == page %}bg-light text-dark{% else %}bg-dark text-light{% endif %} border-0" href="{{ url_for('main.home', year=year, month=month, day=day, page=p) }}">{{ p }}</a>
+          <a class="page-link {% if p == page %}bg-light text-dark{% else %}bg-dark text-light{% endif %} border-0"
+             href="{{ url_for('main.home', year=year, month=month, day=day, page=p) }}">{{ p }}</a>
         </li>
         {% endfor %}
-  
+
         {% if page < total_pages %}
         <li class="page-item">
-          <a class="page-link bg-dark text-light border-0" href="{{ url_for('main.home', year=year, month=month, day=day, page=page+1) }}">Next</a>
+          <a class="page-link bg-dark text-light border-0"
+             href="{{ url_for('main.home', year=year, month=month, day=day, page=page+1) }}">Next</a>
         </li>
         {% endif %}
       </ul>
     </div>
   </footer>
   {% endif %}
-{% endif %}  
 {% endblock %}
 
 {% block scripts %}
@@ -91,27 +98,32 @@ document.addEventListener('DOMContentLoaded', () => {
     entries.forEach(entry => {
       if (entry.isIntersecting) {
         const video = entry.target;
-        // Attach the source only when in view
         const src = video.dataset.src;
         if (src && video.children.length === 0) {
           const source = document.createElement('source');
           source.src = src;
           source.type = 'video/mp4';
           video.appendChild(source);
-          video.load();           // start downloading only now
+          video.load();
         }
-        observer.unobserve(video); // optional: stop observing
+        observer.unobserve(video);
       }
     });
-  }, { rootMargin: '200px' });     // start 200 px before it’s visible
+  }, { rootMargin: '200px' });
 
   lazyVideos.forEach(v => io.observe(v));
 
-  // Existing hover-play / pause logic
   document.querySelectorAll('.video-preview').forEach(video => {
-    video.addEventListener('mouseenter', () => { video.currentTime = 0; video.play(); });
-    video.addEventListener('mouseleave', () => { video.pause(); video.currentTime = 0; });
+    video.addEventListener('mouseenter', () => {
+      video.currentTime = 0;
+      video.play();
+    });
+    video.addEventListener('mouseleave', () => {
+      video.pause();
+      video.currentTime = 0;
+    });
   });
 });
 </script>
 {% endblock %}
+

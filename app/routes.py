@@ -2,8 +2,9 @@ from flask import Blueprint, render_template, send_from_directory, abort, reques
 import os
 import cv2
 import math
-from app.models import Camera
+from app.models import Camera, Folder, File, db
 from pathlib import Path
+from sqlalchemy import and_
 
 main = Blueprint('main', __name__)
 
@@ -41,52 +42,64 @@ def home(year,month,day,filename):
 @main.route('/videos/<int:year>/<int:month>/<int:day>/<path:filename>')
 def serve_video_by_date(year, month, day, filename):
     abs_path = os.path.abspath(current_app.config['EXTERNAL_MEDIA_ROOT'])
-    folder = os.path.join(
-        abs_path,
-        str(year),
-        f"{month:02d}",
-        f"{day:02d}"
-    )
+    folder_path = os.path.join(abs_path, str(year), f"{month:02d}", f"{day:02d}")
+
+    # Optional DB verification
+    folder = Folder.query.filter_by(year=year, month=month, day=day).first()
+    if not folder:
+        abort(404)
+
+    file = File.query.filter_by(folder_id=folder.id, filename=filename).first()
+    if not file:
+        abort(404)
 
     try:
-        return send_from_directory(folder, filename)
+        return send_from_directory(folder_path, filename)
     except FileNotFoundError:
         abort(404)
 
-def get_dir_list(year,month,day):
-        from pathlib import Path
 
 def get_dir_list(year, month, day):
-    root = Path(current_app.config['EXTERNAL_MEDIA_ROOT'])
+    query = request.args.get("search", "").lower()
 
     if year is None:
-        path = root
+        # Return list of years
+        years = db.session.query(Folder.year).distinct().order_by(Folder.year).all()
+        items = [str(y[0]) for y in years]
+
     elif month is None:
-        path = root / year
+        # Return list of months in that year
+        months = db.session.query(Folder.month).filter_by(year=int(year)).distinct().order_by(Folder.month).all()
+        items = [f"{m[0]:02d}" for m in months]
+
     elif day is None:
-        path = root / year / month
+        # Return list of days in that year/month
+        days = db.session.query(Folder.day).filter_by(
+            year=int(year), month=int(month)
+        ).distinct().order_by(Folder.day).all()
+        items = [f"{d[0]:02d}" for d in days]
+
     else:
-        path = root / year / month / day
+        # Return filenames in the day folder
+        folder = Folder.query.filter_by(
+            year=int(year), month=int(month), day=int(day)
+        ).first()
 
-    if not path.exists():
-        return []
+        if not folder:
+            return []
 
-    if day is not None:
-        dir_list = sorted([
-            f.name for f in path.iterdir()
-            if f.is_file() and f.name.endswith('.mp4') and not f.name.startswith('.')
-        ])
-    else:
-        dir_list = sorted([
-            f.name for f in path.iterdir()
-            if f.is_dir() and not f.name.startswith('.')
-        ])
+        files_query = File.query.filter(File.folder_id == folder.id,~File.filename.like('%.jpg')).order_by(File.filename)
 
-    query = request.args.get("search", "").lower()
-    if query:
-        dir_list = [d for d in dir_list if query in d.lower()]
+        if query:
+            files_query = files_query.filter(File.filename.ilike(f"%{query}%"))
 
-    return dir_list
+        items = [f.filename for f in files_query.all()]
+
+    # Apply search to folders/years/months/days as well
+    if query and day is None:
+        items = [i for i in items if query in i.lower()]
+
+    return items
 
         
 

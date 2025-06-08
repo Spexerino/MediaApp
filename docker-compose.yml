@@ -1,15 +1,58 @@
 version: "3.9"
 
 services:
+  db:
+    image: postgres:15
+    container_name: homestation_db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: homestation
+      POSTGRES_SHARED_BUFFERS: 256MB
+      POSTGRES_WORK_MEM: 16MB
+      POSTGRES_EFFECTIVE_CACHE_SIZE: 512MB
+      POSTGRES_CHECKPOINT_TIMEOUT: 30min
+      POSTGRES_MAX_WAL_SIZE: 512MB
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "6543:5432"
+
   flaskapp:
     build: .
     container_name: homestation
     ports:
       - "4999:4999"
     volumes:
-      - /volume1/video:/app/videos:ro
+      - /Volumes/video:/app/videos:ro
     environment:
       - FLASK_ENV=development
+      - DB_URL=postgresql+psycopg2://postgres:postgres@db:5432/homestation
+      - INIT_DB=True
+      - PYTHONUNBUFFERED=1
     env_file: 
       - .env
+    depends_on:
+      - db
+
+  scanner:
+    build:
+      context: .
+      dockerfile: Dockerfile.scanner
+    container_name: homestation_scanner
+    volumes:
+      - /Volumes/video:/app/videos:ro
+    environment:
+      - DB_URL=postgresql+psycopg2://postgres:postgres@db:5432/homestation
+      - INIT_DB=False
+      - PYTHONUNBUFFERED=1
+    env_file:
+      - .env
+    depends_on:
+      - db
+
+volumes:
+  postgres_data:
+
 
